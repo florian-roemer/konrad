@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class _ARTS:
-    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0):
+    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
+                 lut_path=None):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -76,12 +77,13 @@ class _ARTS:
         )
 
         # Read lookup table
-        if getpass.getuser() == 'froemer':
-            lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
-        elif getpass.getuser() == 'u301023':
-            lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
-        else:
-            print('Your environment is not supported. Please set path to konrad lookup table!')
+        if lut_path == None:
+            if getpass.getuser() == 'froemer':
+                lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
+            elif getpass.getuser() == 'u301023':
+                lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
+            else:
+                print('Your environment is not supported. Please set path to konrad lookup table!')
 
         abs_lookup = os.getenv(
             "KONRAD_LOOKUP_TABLE", lut_path
