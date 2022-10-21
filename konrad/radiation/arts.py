@@ -12,6 +12,8 @@ from konrad.cloud import ClearSky
 from .rrtmg import RRTMG
 from .common import fluxes2heating
 
+import getpass
+
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +76,15 @@ class _ARTS:
         )
 
         # Read lookup table
+        if getpass.getuser() == 'froemer':
+            lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
+        elif getpass.getuser() == 'u301023':
+            lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
+        else:
+            print('Your environment is not supported. Please set path to konrad lookup table!')
+
         abs_lookup = os.getenv(
-            "KONRAD_LOOKUP_TABLE", '/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml'
+            "KONRAD_LOOKUP_TABLE", lut_path
         )
 
         if not isfile(abs_lookup):
@@ -122,7 +131,6 @@ class _ARTS:
             wavenumber (ndarray): Wavenumber grid [m-1].
         """
         import pyarts
-        import getpass
         
         # Create a frequency grid
         if wavenumber is None:
