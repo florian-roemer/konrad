@@ -57,7 +57,7 @@ class _ARTS:
         self.ws.abs_speciesSet(
             species=[
                 "O2, O2-CIAfunCKDMT100",
-                "H2O, H2O-SelfContCKDMT252, H2O-ForeignContCKDMT252",
+                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
                 "O3",
                 "CO2, CO2-CKDMT252",
                 "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
@@ -75,7 +75,7 @@ class _ARTS:
 
         # Read lookup table
         abs_lookup = os.getenv(
-            "KONRAD_LOOKUP_TABLE", join(dirname(__file__), "data/abs_lookup.xml")
+            "KONRAD_LOOKUP_TABLE", '/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml'
         )
 
         if not isfile(abs_lookup):
@@ -100,7 +100,8 @@ class _ARTS:
         if threads is not None:
             self.ws.SetNumberOfThreads(threads)
 
-    def calc_lookup_table(self, filename=None, fnum=2 ** 15, wavenumber=None):
+    def calc_lookup_table(self, filename=None, fnum=2 ** 15, wavenumber=None,
+                          scale_species="H2O-SelfContCKDMT350", scale_factor=0.0):
         """Calculate an absorption lookup table.
 
         The lookup table is constructed to cover surface temperatures
@@ -120,6 +121,8 @@ class _ARTS:
                 Ignored if `wavenumber` is set.
             wavenumber (ndarray): Wavenumber grid [m-1].
         """
+        import pyarts
+        
         # Create a frequency grid
         if wavenumber is None:
             wavenumber = np.linspace(10e2, 3_250e2, fnum)
@@ -127,16 +130,26 @@ class _ARTS:
 
         # Read line catagloge and create absorption lines.
         self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
-            basename="lines/"
+            # basename="lines/"
+            basename="/Users/froemer/Documents/arts-cat-data/lines/"
         )
 
         # Set line shape and cut off.
-        self.ws.LegacyContinuaInit()
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
-        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
+        # self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
+        
+        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
+        def propmat_clearsky_agenda(ws):
+            ws.propmat_clearskyInit()
+            ws.propmat_clearskyAddPredefined() # why does AddConts not work??
+            ws.propmat_clearskyAddLines()
+            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
+                                                scale=scale_factor)
+
+        self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
 
         # Create a standard atmosphere
         p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
