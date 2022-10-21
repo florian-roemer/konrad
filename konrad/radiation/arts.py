@@ -122,6 +122,7 @@ class _ARTS:
             wavenumber (ndarray): Wavenumber grid [m-1].
         """
         import pyarts
+        import getpass
         
         # Create a frequency grid
         if wavenumber is None:
@@ -129,9 +130,15 @@ class _ARTS:
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
 
         # Read line catagloge and create absorption lines.
+        if getpass.getuser() == 'froemer':
+            arts_cat_path = "/Users/froemer/Documents/arts-cat-data/lines/"
+        elif getpass.getuser() == 'u301023':
+            arts_cat_path = "/work/um0878/users/froemer/arts-cat-data/lines/"
+        else:
+            print('Your environment is not supported. Please set path to arts-cat-data!')
+        
         self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
-            # basename="lines/"
-            basename="/Users/froemer/Documents/arts-cat-data/lines/"
+            basename=arts_cat_path
         )
 
         # Set line shape and cut off.
