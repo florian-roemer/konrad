@@ -13,14 +13,14 @@ from .rrtmg import RRTMG
 from .common import fluxes2heating
 
 import getpass
-
+import pyarts
 
 logger = logging.getLogger(__name__)
 
 
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
-                 lut_path=None):
+                 scale_species='H2O-SelfContCKDMT350', scale_factor=0.0):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -77,13 +77,12 @@ class _ARTS:
         )
 
         # Read lookup table
-        if lut_path == None:
-            if getpass.getuser() == 'froemer':
-                lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
-            elif getpass.getuser() == 'u301023':
-                lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
-            else:
-                print('Your environment is not supported. Please set path to konrad lookup table!')
+        if getpass.getuser() == 'froemer':
+            lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
+        elif getpass.getuser() == 'u301023':
+            lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
+        else:
+            print('Your environment is not supported. Please set path to konrad lookup table!')
 
         abs_lookup = os.getenv(
             "KONRAD_LOOKUP_TABLE", lut_path
@@ -103,7 +102,15 @@ class _ARTS:
         self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
         self.ws.f_gridFromGasAbsLookup()
         self.ws.abs_lookupAdapt()
-        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+
+        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
+        def propmat_clearsky_agenda(ws):
+            ws.propmat_clearskyInit()
+            ws.propmat_clearskyAddFromLookup(abs_lookup_is_adapted=1)
+            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
+                                                scale=scale_factor)
+
+        self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
 
         self.ws.sensorOff()  # No sensor properties
 
@@ -132,7 +139,6 @@ class _ARTS:
                 Ignored if `wavenumber` is set.
             wavenumber (ndarray): Wavenumber grid [m-1].
         """
-        import pyarts
         
         # Create a frequency grid
         if wavenumber is None:
@@ -219,7 +225,6 @@ class _ARTS:
 
     def set_atmospheric_state(self, atmosphere, t_surface):
         """Set and check the atmospheric fields."""
-        import pyarts
 
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
