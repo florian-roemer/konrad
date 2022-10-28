@@ -62,8 +62,8 @@ class _ARTS:
                 "O2, O2-CIAfunCKDMT100",
                 "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
                 "O3",
-                "CO2, CO2-CKDMT252",
-                "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+                "CO2, CO2-CKDMT350",
+                "N2, N2-CIAfunCKDMT350, N2-CIArotCKDMT350",
                 "N2O",
                 "CH4",
                 "CO",
@@ -165,7 +165,8 @@ class _ARTS:
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
         def propmat_clearsky_agenda(ws):
             ws.propmat_clearskyInit()
-            ws.propmat_clearskyAddPredefined() # why does AddConts not work??
+            # ws.propmat_clearskyAddPredefined() # why does AddConts not work??
+            ws.propmat_clearskyAddConts() # why does AddConts not work??
             ws.propmat_clearskyAddLines()
             
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
