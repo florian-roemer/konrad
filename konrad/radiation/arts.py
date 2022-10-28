@@ -57,7 +57,7 @@ class _ARTS:
         self.ws.abs_speciesSet(
             species=[
                 "O2, O2-CIAfunCKDMT100",
-                "H2O, H2O-SelfContCKDMT350, H2O-ForeignContCKDMT350",
+                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
                 "O3",
                 "CO2, CO2-CKDMT252",
                 "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
