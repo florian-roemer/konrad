@@ -13,16 +13,13 @@ from .rrtmg import RRTMG
 from .common import fluxes2heating
 
 import getpass
-import pyarts
 
 logger = logging.getLogger(__name__)
 
 
 class _ARTS:
-    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
-                 scale_species='H2O-SelfContCKDMT350', scale_factor=0.0):
+    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0):
         """Initialize a wrapper for an ARTS workspace.
-
         Parameters:
             ws (pyarts.workspace.Workspace): An ARTS workspace.
             threads (int): Number of threads to use.
@@ -60,7 +57,7 @@ class _ARTS:
         self.ws.abs_speciesSet(
             species=[
                 "O2, O2-CIAfunCKDMT100",
-                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
+                "H2O, H2O-SelfContCKDMT350, H2O-ForeignContCKDMT350",
                 "O3",
                 "CO2, CO2-CKDMT252",
                 "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
@@ -102,15 +99,7 @@ class _ARTS:
         self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
         self.ws.f_gridFromGasAbsLookup()
         self.ws.abs_lookupAdapt()
-
-        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
-        def propmat_clearsky_agenda(ws):
-            ws.propmat_clearskyInit()
-            ws.propmat_clearskyAddFromLookup(abs_lookup_is_adapted=1)
-            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-                                                scale=scale_factor)
-
-        self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
         self.ws.sensorOff()  # No sensor properties
 
@@ -120,17 +109,13 @@ class _ARTS:
 
     def calc_lookup_table(self, filename=None, fnum=2 ** 15, wavenumber=None):
         """Calculate an absorption lookup table.
-
         The lookup table is constructed to cover surface temperatures
         between 200 and 400 K, and water vapor mixing ratio up to 40%.
-
         The frequency grid covers the whole outgoing longwave spectrum
         from 10 to 3,250 cm^-1.
-
         References:
             An absorption lookup table can be found at
                 https://doi.org/10.5281/zenodo.3885410
-
         Parameters:
             filename (str): (Optional) path to an ARTS XML file
                 to store the lookup table.
@@ -138,7 +123,6 @@ class _ARTS:
                 Ignored if `wavenumber` is set.
             wavenumber (ndarray): Wavenumber grid [m-1].
         """
-        
         # Create a frequency grid
         if wavenumber is None:
             wavenumber = np.linspace(10e2, 3_250e2, fnum)
@@ -157,12 +141,13 @@ class _ARTS:
         )
 
         # Set line shape and cut off.
+        self.ws.LegacyContinuaInit()
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
-        
+
         # Create a standard atmosphere
         p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
 
@@ -214,6 +199,7 @@ class _ARTS:
 
     def set_atmospheric_state(self, atmosphere, t_surface):
         """Set and check the atmospheric fields."""
+        import pyarts
 
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
@@ -304,11 +290,9 @@ class _ARTS:
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
         """Integrate the spectral irradiance field over the frequency.
-
         Parameters:
             frequency (ndarray): Frequency [Hz].
             irradiance (ndarray): Spectral irradiance [W m^-2 / Hz].
-
         Returns:
             ndarray, ndarray: Downward flux, upward, flux [W m^-2]
         """
@@ -322,11 +306,9 @@ class _ARTS:
 
     def calc_spectral_olr(self, atmosphere, surface):
         """Calculate the outgoing longwave radiation as function of wavenumber.
-
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface.Surface): Surface model.
-
         Returns:
            ndarray: Outgoing longwave radiation [W m^-2 / cm^-1]
         """
@@ -339,7 +321,6 @@ class _ARTS:
 class ARTS(RRTMG):
     def __init__(self, store_spectral_olr=False, *args, arts_kwargs={}, **kwargs):
         """Radiation class to provide line-by-line longwave fluxes.
-
         Parameters:
             store_spectral_olr (bool): Store spectral OLR in netCDF file.
                 This will significantly increase the output size.
