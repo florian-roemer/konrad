@@ -57,7 +57,7 @@ class _ARTS:
         self.ws.abs_speciesSet(
             species=[
                 "O2, O2-CIAfunCKDMT100",
-                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
+                "H2O, H2O-SelfContCKDMT350, H2O-ForeignContCKDMT350",
                 "O3",
                 "CO2, CO2-CKDMT252",
                 "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
@@ -73,33 +73,33 @@ class _ARTS:
             option="Specular_NoPol_ReflFix_SurfTFromt_surface",
         )
 
-        # Read lookup table
-        if getpass.getuser() == 'froemer':
-            lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
-        elif getpass.getuser() == 'u301023':
-            lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
-        else:
-            print('Your environment is not supported. Please set path to konrad lookup table!')
+        # # Read lookup table
+        # if getpass.getuser() == 'froemer':
+        #     lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
+        # elif getpass.getuser() == 'u301023':
+        #     lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
+        # else:
+        #     print('Your environment is not supported. Please set path to konrad lookup table!')
 
-        abs_lookup = os.getenv(
-            "KONRAD_LOOKUP_TABLE", lut_path
-        )
+        # abs_lookup = os.getenv(
+        #     "KONRAD_LOOKUP_TABLE", lut_path
+        # )
 
-        if not isfile(abs_lookup):
-            raise FileNotFoundError(
-                "Could not find ARTS absorption lookup table.\n"
-                "To perform ARTS calculations you have to download the lookup "
-                "table at:\n\n    https://doi.org/10.5281/zenodo.3885410\n\n"
-                "Afterwards, use the following environment variable to tell "
-                "konrad where to find it:\n\n"
-                "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'"
-            )
+        # if not isfile(abs_lookup):
+        #     raise FileNotFoundError(
+        #         "Could not find ARTS absorption lookup table.\n"
+        #         "To perform ARTS calculations you have to download the lookup "
+        #         "table at:\n\n    https://doi.org/10.5281/zenodo.3885410\n\n"
+        #         "Afterwards, use the following environment variable to tell "
+        #         "konrad where to find it:\n\n"
+        #         "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'"
+        #     )
 
-        self.ws.abs_lines_per_speciesSetEmpty()
-        self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
-        self.ws.f_gridFromGasAbsLookup()
-        self.ws.abs_lookupAdapt()
-        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+        # self.ws.abs_lines_per_speciesSetEmpty()
+        # self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
+        # self.ws.f_gridFromGasAbsLookup()
+        # self.ws.abs_lookupAdapt()
+        # self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
         self.ws.sensorOff()  # No sensor properties
 
