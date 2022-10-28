@@ -165,8 +165,7 @@ class _ARTS:
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
         def propmat_clearsky_agenda(ws):
             ws.propmat_clearskyInit()
-            # ws.propmat_clearskyAddPredefined() # why does AddConts not work??
-            ws.propmat_clearskyAddConts() # why does AddConts not work??
+            ws.propmat_clearskyAddPredefined() # why does AddConts not work??
             ws.propmat_clearskyAddLines()
             
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
