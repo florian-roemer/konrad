@@ -164,11 +164,15 @@ class _ARTS:
         
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
         def propmat_clearsky_agenda(ws):
+            ws.Ignore(ws.rtp_mag)
+            ws.Ignore(ws.rtp_los)
             ws.propmat_clearskyInit()
             ws.propmat_clearskyAddPredefined()
             ws.propmat_clearskyAddLines()
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
+        # self.ws.propmat_clearsky_agendaAuto()
+        # print(self.ws.propmat_clearsky_agenda.value)
         
         # Create a standard atmosphere
         p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
