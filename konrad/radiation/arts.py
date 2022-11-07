@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
                  scale_species='H2O-SelfContCKDMT350', scale_factor=0.0, fnum=2 ** 15,
-                 wavenumber=None):
+                 wavenumber=None, species='default'):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -58,18 +58,24 @@ class _ARTS:
         self.ws.cloudboxOff()  # Clearsky = No scattering
 
         # Set Absorption Species
-        self.ws.abs_speciesSet(
-            species=[
-                "O2, O2-CIAfunCKDMT100",
-                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
-                "O3",
-                "CO2, CO2-CKDMT252",
-                "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
-                "N2O",
-                "CH4",
-                "CO",
-            ]
-        )
+        if species == 'default':
+            self.ws.abs_speciesSet(
+                species=[
+                    "O2, O2-CIAfunCKDMT100",
+                    "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
+                    "O3",
+                    "CO2, CO2-CKDMT252",
+                    "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+                    "N2O",
+                    "CH4",
+                    "CO",
+                ]
+            )
+        else:
+            self.ws.abs_speciesSet(
+                species=species
+            )
+
 
         # Surface handling
         self.ws.VectorSetConstant(self.ws.surface_scalar_reflectivity, 1, 0.0)
@@ -99,6 +105,7 @@ class _ARTS:
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.abs_lines_per_speciesTurnOffLineMixing()
 
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
         def propmat_clearsky_agenda(ws):
@@ -111,6 +118,7 @@ class _ARTS:
                                                 scale=scale_factor)
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
+        print(self.ws.propmat_clearsky_agenda.value)
 
         self.ws.sensorOff()  # No sensor properties
 
@@ -120,9 +128,7 @@ class _ARTS:
             
         # Run checks
         self.ws.propmat_clearsky_agenda_checkedCalc()
-        self.ws.lbl_checked = 1  # self.ws.lbl_checkedCalc()
-
-
+        self.ws.lbl_checkedCalc()
 
 
     def set_atmospheric_state(self, atmosphere, t_surface):
