@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
                  scale_species='H2O-SelfContCKDMT350', scale_factor=0.0, fnum=2 ** 15,
-                 wavenumber=None, species='default'):
+                 wavenumber=None, species='default', cutoff=True):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -104,7 +104,8 @@ class _ARTS:
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
-        self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        if cutoff:
+            self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
         self.ws.abs_lines_per_speciesTurnOffLineMixing()
 
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
@@ -114,8 +115,6 @@ class _ARTS:
             ws.propmat_clearskyInit()
             ws.propmat_clearskyAddPredefined()
             ws.propmat_clearskyAddLines()
-            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-                                                scale=scale_factor)
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
         print(self.ws.propmat_clearsky_agenda.value)
