@@ -141,11 +141,11 @@ class _ARTS:
         )
 
         # Set line shape and cut off.
-        self.ws.LegacyContinuaInit()
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.abs_lines_per_speciesTurnOffLineMixing()
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
 
         # Create a standard atmosphere
