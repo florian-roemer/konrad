@@ -114,8 +114,8 @@ class _ARTS:
             ws.propmat_clearskyInit()
             ws.propmat_clearskyAddPredefined()
             ws.propmat_clearskyAddLines()
-            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-                                                scale=scale_factor)
+            # ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
+            #                                     scale=scale_factor)
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
         print(self.ws.propmat_clearsky_agenda.value)
