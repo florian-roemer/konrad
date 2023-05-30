@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
-                 scale_species='H2O-SelfContCKDMT350', scale_factor=0.0):
+                 scale_species='H2O-SelfContCKDMT400', scale_factor=0.0, fnum=2 ** 15,
+                 wavenumber=None, species='default'):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -57,18 +58,24 @@ class _ARTS:
         self.ws.cloudboxOff()  # Clearsky = No scattering
 
         # Set Absorption Species
-        self.ws.abs_speciesSet(
-            species=[
-                "O2, O2-CIAfunCKDMT100",
-                "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
-                "O3",
-                "CO2, CO2-CKDMT252",
-                "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
-                "N2O",
-                "CH4",
-                "CO",
-            ]
-        )
+        if species == 'default':
+            self.ws.abs_speciesSet(
+                species=[
+                    "O2, O2-CIAfunCKDMT100",
+                    "H2O", "H2O-SelfContCKDMT400", "H2O-ForeignContCKDMT400",
+                    "O3",
+                    "CO2, CO2-CKDMT252",
+                    "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+                    "N2O",
+                    "CH4",
+                    "CO",
+                ]
+            )
+        else:
+            self.ws.abs_speciesSet(
+                species=species
+            )
+
 
         # Surface handling
         self.ws.VectorSetConstant(self.ws.surface_scalar_reflectivity, 1, 0.0)
@@ -76,69 +83,6 @@ class _ARTS:
             option="Specular_NoPol_ReflFix_SurfTFromt_surface",
         )
 
-        # Read lookup table
-        if getpass.getuser() == 'froemer':
-            lut_path = "/Users/froemer/Documents/konrad/abs_lookup/abs_lookup.xml"
-        elif getpass.getuser() == 'u301023':
-            lut_path = "/work/um0878/users/froemer/konrad/abs_lookup/abs_lookup.xml"
-        else:
-            print('Your environment is not supported. Please set path to konrad lookup table!')
-
-        abs_lookup = os.getenv(
-            "KONRAD_LOOKUP_TABLE", lut_path
-        )
-
-        if not isfile(abs_lookup):
-            raise FileNotFoundError(
-                "Could not find ARTS absorption lookup table.\n"
-                "To perform ARTS calculations you have to download the lookup "
-                "table at:\n\n    https://doi.org/10.5281/zenodo.3885410\n\n"
-                "Afterwards, use the following environment variable to tell "
-                "konrad where to find it:\n\n"
-                "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'"
-            )
-
-        self.ws.abs_lines_per_speciesSetEmpty()
-        self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
-        self.ws.f_gridFromGasAbsLookup()
-        self.ws.abs_lookupAdapt()
-
-        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
-        def propmat_clearsky_agenda(ws):
-            ws.propmat_clearskyInit()
-            ws.propmat_clearskyAddFromLookup(abs_lookup_is_adapted=1)
-            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-                                                scale=scale_factor)
-
-        self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
-
-        self.ws.sensorOff()  # No sensor properties
-
-        # Set number of OMP threads
-        if threads is not None:
-            self.ws.SetNumberOfThreads(threads)
-
-    def calc_lookup_table(self, filename=None, fnum=2 ** 15, wavenumber=None):
-        """Calculate an absorption lookup table.
-
-        The lookup table is constructed to cover surface temperatures
-        between 200 and 400 K, and water vapor mixing ratio up to 40%.
-
-        The frequency grid covers the whole outgoing longwave spectrum
-        from 10 to 3,250 cm^-1.
-
-        References:
-            An absorption lookup table can be found at
-                https://doi.org/10.5281/zenodo.3885410
-
-        Parameters:
-            filename (str): (Optional) path to an ARTS XML file
-                to store the lookup table.
-            fnum (int): Number of frequencies in frequency grid.
-                Ignored if `wavenumber` is set.
-            wavenumber (ndarray): Wavenumber grid [m-1].
-        """
-        
         # Create a frequency grid
         if wavenumber is None:
             wavenumber = np.linspace(10e2, 3_250e2, fnum)
@@ -147,8 +91,10 @@ class _ARTS:
         # Read line catagloge and create absorption lines.
         if getpass.getuser() == 'froemer':
             arts_cat_path = "/Users/froemer/Documents/arts-cat-data/lines/"
+            self.ws.ReadXML(self.ws.predefined_model_data, "/Users/froemer/Documents/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
         elif getpass.getuser() == 'u301023':
             arts_cat_path = "/work/um0878/users/froemer/arts-cat-data/lines/"
+            self.ws.ReadXML(self.ws.predefined_model_data, "/work/um0878/users/froemer/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
         else:
             print('Your environment is not supported. Please set path to arts-cat-data!')
         
@@ -161,56 +107,31 @@ class _ARTS:
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
-        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
-        
-        # Create a standard atmosphere
-        p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
+        self.ws.abs_lines_per_speciesTurnOffLineMixing()
 
-        atmosphere = Atmosphere(p_grid)
-        atmosphere["T"][-1, :] = 300.0 + 5.0 * np.log(atmosphere["plev"] / 1000e2)
-        atmosphere.tracegases_rcemip()
-        atmosphere["O2"][:] = 0.2095
-        atmosphere["CO2"][:] = 1.5 * 348e-6
+        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
+        def propmat_clearsky_agenda(ws):
+            ws.Ignore(ws.rtp_mag)
+            ws.Ignore(ws.rtp_los)
+            ws.propmat_clearskyInit()
+            ws.propmat_clearskyAddPredefined()
+            ws.propmat_clearskyAddLines()
+            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
+                                                scale=scale_factor)
+      
+        self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
+        print(self.ws.propmat_clearsky_agenda.value)
 
-        h2o = 0.01 * (p_grid / 1000e2) ** 0.2
-        atmosphere["H2O"][:] = h2o[:-1]
+        self.ws.sensorOff()  # No sensor properties
 
-        # Convert the konrad atmosphere into an ARTS atm_fields_compact.
-        atm_fields_compact = atmosphere.to_atm_fields_compact()
-        self.ws.atm_fields_compact = atm_fields_compact
-
-        self.ws.atm_fields_compactAddConstant(
-            atm_fields_compact=self.ws.atm_fields_compact,
-            name="abs_species-N2",
-            value=0.7808,
-            condensibles=["abs_species-H2O"],
-        )
-
-        # Setup the lookup table calculation
-        self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
-        self.ws.vmr_field.value = self.ws.vmr_field.value.value.clip(min=0.0)
-        self.ws.atmfields_checkedCalc()
-        self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
-        self.ws.abs_t_pert = np.arange(-160, 61, 20)
-
-        nls_idx = [
-            i for i, tag in enumerate(self.ws.abs_species.value) if "H2O" in tag
-        ][0]
-        self.ws.abs_nls = [self.ws.abs_species.value[nls_idx]]
-
-        self.ws.abs_nls_pert = np.array(
-            [10 ** x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]]
-        )
-
+        # Set number of OMP threads
+        if threads is not None:
+            self.ws.SetNumberOfThreads(threads)
+            
         # Run checks
         self.ws.propmat_clearsky_agenda_checkedCalc()
-        self.ws.lbl_checked = 1  # self.ws.lbl_checkedCalc()
+        self.ws.lbl_checkedCalc()
 
-        # Calculate actual lookup table.
-        self.ws.abs_lookupCalc()
-
-        if filename is not None:
-            self.ws.WriteXML("binary", self.ws.abs_lookup, filename)
 
     def set_atmospheric_state(self, atmosphere, t_surface):
         """Set and check the atmospheric fields."""
