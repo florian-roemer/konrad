@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
-                 scale_species='H2O-SelfContCKDMT350', scale_factor=0.0, fnum=2 ** 15,
+                 scale_species='H2O-SelfContCKDMT400', scale_factor=0.0, fnum=2 ** 15,
                  wavenumber=None, species='default'):
         """Initialize a wrapper for an ARTS workspace.
 
@@ -62,7 +62,7 @@ class _ARTS:
             self.ws.abs_speciesSet(
                 species=[
                     "O2, O2-CIAfunCKDMT100",
-                    "H2O", "H2O-SelfContCKDMT350", "H2O-ForeignContCKDMT350",
+                    "H2O", "H2O-SelfContCKDMT400", "H2O-ForeignContCKDMT400",
                     "O3",
                     "CO2, CO2-CKDMT252",
                     "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
@@ -91,8 +91,10 @@ class _ARTS:
         # Read line catagloge and create absorption lines.
         if getpass.getuser() == 'froemer':
             arts_cat_path = "/Users/froemer/Documents/arts-cat-data/lines/"
+            self.ws.ReadXML(self.ws.predefined_model_data, "/Users/froemer/Documents/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
         elif getpass.getuser() == 'u301023':
             arts_cat_path = "/work/um0878/users/froemer/arts-cat-data/lines/"
+            self.ws.ReadXML(self.ws.predefined_model_data, "/work/um0878/users/froemer/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
         else:
             print('Your environment is not supported. Please set path to arts-cat-data!')
         
@@ -114,8 +116,8 @@ class _ARTS:
             ws.propmat_clearskyInit()
             ws.propmat_clearskyAddPredefined()
             ws.propmat_clearskyAddLines()
-            # ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-            #                                     scale=scale_factor)
+            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
+                                                scale=scale_factor)
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
         print(self.ws.propmat_clearsky_agenda.value)
