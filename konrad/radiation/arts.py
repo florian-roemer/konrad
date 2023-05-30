@@ -109,6 +109,9 @@ class _ARTS:
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
         self.ws.abs_lines_per_speciesTurnOffLineMixing()
 
+        # switch off line absorption to calculate optical depth of continua alone
+        self.ws.abs_lines_per_speciesSetEmpty()
+
         @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
         def propmat_clearsky_agenda(ws):
             ws.Ignore(ws.rtp_mag)
@@ -220,7 +223,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.f_grid.value[:].copy(), tau
+        return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], tau, self.ws.z_field.value[:, 0, 0]
 
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
