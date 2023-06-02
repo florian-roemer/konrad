@@ -220,7 +220,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.f_grid.value[:].copy(), tau
+        return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], tau, self.ws.z_field.value[:, 0, 0]
 
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
