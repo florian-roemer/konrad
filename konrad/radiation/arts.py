@@ -87,19 +87,15 @@ class _ARTS:
         if wavenumber is None:
             wavenumber = np.linspace(10e2, 3_250e2, fnum)
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
-
+       
         # Read line catagloge and create absorption lines.
-        if getpass.getuser() == 'froemer':
-            arts_cat_path = "/Users/froemer/Documents/arts-cat-data/lines/"
-            self.ws.ReadXML(self.ws.predefined_model_data, "/Users/froemer/Documents/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
-        elif getpass.getuser() == 'u301023':
-            arts_cat_path = "/work/um0878/users/froemer/arts-cat-data/lines/"
-            self.ws.ReadXML(self.ws.predefined_model_data, "/work/um0878/users/froemer/arts-cat-data/model/mt_ckd_4.0/H2O.xml")
-        else:
-            print('Your environment is not supported. Please set path to arts-cat-data!')
-        
         self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
-            basename=arts_cat_path
+            basename="lines/"
+        )
+        
+        self.ws.ReadXML(
+            self.ws.predefined_model_data,
+            "model/mt_ckd_4.0/H2O.xml"
         )
 
         # Set line shape and cut off.
