@@ -12,7 +12,6 @@ from konrad.cloud import ClearSky
 from .rrtmg import RRTMG
 from .common import fluxes2heating
 
-import getpass
 import pyarts
 
 logger = logging.getLogger(__name__)
