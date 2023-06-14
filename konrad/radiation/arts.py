@@ -204,7 +204,21 @@ class _ARTS:
         )
 
     def calc_optical_thickness(self, atmosphere, t_surface):
-        """Calculate the spectral irradiance field."""
+    """Calculate the spectral optical thickness of the entire atmospheric column."""
+    self.set_atmospheric_state(atmosphere, t_surface)
+
+    self.ws.propmat_clearsky_fieldCalc()
+
+    tau = np.trapz(
+        y=self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0],
+        x=self.ws.z_field.value[:, 0, 0],
+        axis=-1,
+    )
+
+    return self.ws.f_grid.value[:].copy(), tau
+
+    def calc_optical_thickness_layers(self, atmosphere, t_surface):
+        """Calculate the spectral optical thickness of each vertical layer."""
         self.set_atmospheric_state(atmosphere, t_surface)
 
         self.ws.propmat_clearsky_fieldCalc()
@@ -215,7 +229,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], tau, self.ws.z_field.value[:, 0, 0]
+        return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], self.ws.f_grid.value[:].copy(), self.ws.z_field.value[:, 0, 0]
 
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
