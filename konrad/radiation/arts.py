@@ -223,12 +223,6 @@ class _ARTS:
 
         self.ws.propmat_clearsky_fieldCalc()
 
-        tau = np.trapz(
-            y=self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0],
-            x=self.ws.z_field.value[:, 0, 0],
-            axis=-1,
-        )
-
         return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], self.ws.f_grid.value[:].copy(), self.ws.z_field.value[:, 0, 0]
 
     @staticmethod
