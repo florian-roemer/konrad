@@ -221,6 +221,15 @@ class _ARTS:
         """Calculate the spectral optical thickness of each vertical layer."""
         self.set_atmospheric_state(atmosphere, t_surface)
 
+        # redefine propmat_clearsky_agenda because self.ws.propmat_clearsky_fieldCalc() not compatable with ws.propmat_clearskyAddScaledSpecies()
+        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
+        def propmat_clearsky_agenda(ws):
+            ws.Ignore(ws.rtp_mag)
+            ws.Ignore(ws.rtp_los)
+            ws.propmat_clearskyInit()
+            ws.propmat_clearskyAddPredefined()
+            ws.propmat_clearskyAddLines()
+        
         self.ws.propmat_clearsky_fieldCalc()
 
         return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], self.ws.f_grid.value[:].copy(), self.ws.z_field.value[:, 0, 0]
