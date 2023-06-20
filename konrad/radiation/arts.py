@@ -215,7 +215,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0], tau, self.ws.z_field.value[:, 0, 0]
+        return self.ws.f_grid.value[:].copy(), tau
 
     def calc_optical_thickness_layers(self, atmosphere, t_surface):
         """Calculate the spectral optical thickness of each vertical layer."""
