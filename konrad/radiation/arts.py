@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 class _ARTS:
     def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
-                 scale_species='H2O-SelfContCKDMT400', scale_factor=0.0, fnum=2 ** 15,
-                 wavenumber=None, species='default'):
+                 fnum=2 ** 15, wavenumber=None, species='default', cont_file='H2O.xml'):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -94,7 +93,7 @@ class _ARTS:
         
         self.ws.ReadXML(
             self.ws.predefined_model_data,
-            "model/mt_ckd_4.0/H2O.xml"
+            f"model/mt_ckd_4.0/{cont_file}"
         )
 
         # Set line shape and cut off.
@@ -111,8 +110,6 @@ class _ARTS:
             ws.propmat_clearskyInit()
             ws.propmat_clearskyAddPredefined()
             ws.propmat_clearskyAddLines()
-            ws.propmat_clearskyAddScaledSpecies(target=scale_species, 
-                                                scale=scale_factor)
       
         self.ws.propmat_clearsky_agenda = propmat_clearsky_agenda
         print(self.ws.propmat_clearsky_agenda.value)
@@ -220,15 +217,6 @@ class _ARTS:
     def calc_optical_thickness_layers(self, atmosphere, t_surface):
         """Calculate the spectral optical thickness of each vertical layer."""
         self.set_atmospheric_state(atmosphere, t_surface)
-
-        # redefine propmat_clearsky_agenda because self.ws.propmat_clearsky_fieldCalc() not compatable with ws.propmat_clearskyAddScaledSpecies()
-        @pyarts.workspace.arts_agenda(ws=self.ws, set_agenda=True)
-        def propmat_clearsky_agenda(ws):
-            ws.Ignore(ws.rtp_mag)
-            ws.Ignore(ws.rtp_los)
-            ws.propmat_clearskyInit()
-            ws.propmat_clearskyAddPredefined()
-            ws.propmat_clearskyAddLines()
         
         self.ws.propmat_clearsky_fieldCalc()
 
