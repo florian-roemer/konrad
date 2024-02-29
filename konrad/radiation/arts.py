@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class _ARTS:
-    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0,
+    def __init__(self, ws=None, threads=None, nstreams=8, scale_vmr=True, verbosity=0,
                  fnum=2 ** 15, wavenumber=None, species='default', cont_file='H2O.xml'):
         """Initialize a wrapper for an ARTS workspace.
 
@@ -53,7 +53,6 @@ class _ARTS:
         self.ws.IndexSet(self.ws.stokes_dim, 1)
 
         self.ws.jacobianOff()  # No jacobian calculation
-        self.ws.cloudboxOff()  # Clearsky = No scattering
 
         # Set Absorption Species
         if species == 'default':
@@ -174,30 +173,25 @@ class _ARTS:
         self.ws.atmfields_checkedCalc()
         self.ws.propmat_clearsky_agenda_checkedCalc()
         self.ws.atmgeom_checkedCalc()
-        self.ws.cloudbox_checkedCalc()
+        
 
     def calc_spectral_irradiance_field(self, atmosphere, t_surface):
         """Calculate the spectral irradiance field."""
         self.set_atmospheric_state(atmosphere, t_surface)
 
-        # get the zenith angle grid and the integrations weights
-        self.ws.AngularGridsSetFluxCalc(
-            N_za_grid=self.nstreams, N_aa_grid=1, za_grid_type="double_gauss"
-        )
+        self.ws.cloudboxSetFullAtm()
+        self.ws.scat_data_checked = 1
+        self.ws.Touch(self.ws.scat_data)
+        self.ws.pnd_fieldZero()
+        self.ws.cloudbox_checkedCalc()
+        self.ws.surface_skin_t = t_surface
 
-        # calculate intensity field
-        self.ws.Tensor3Create("trans_field")
-        self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-            trans_field=self.ws.trans_field,
-            use_parallel_za=0,
-        )
-        self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
+        self.ws.spectral_irradiance_fieldDisort(nstreams=self.nstreams, emission=1)
 
         return (
             self.ws.f_grid.value[:].copy(),
             self.ws.p_grid.value[:].copy(),
             self.ws.spectral_irradiance_field.value[:].copy(),
-            self.ws.trans_field.value[:, 1:, 0].copy().prod(axis=1),
         )
 
     def calc_optical_thickness(self, atmosphere, t_surface):
@@ -251,7 +245,7 @@ class _ARTS:
         Returns:
            ndarray: Outgoing longwave radiation [W m^-2 / cm^-1]
         """
-        f, _, irradiance_field, _ = self.calc_spectral_irradiance_field(
+        f, _, irradiance_field = self.calc_spectral_irradiance_field(
             atmosphere=atmosphere, t_surface=surface["temperature"][0]
         )
         return f, irradiance_field[:, -1, 0, 0, 1]
